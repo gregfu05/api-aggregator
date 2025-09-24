@@ -1,11 +1,34 @@
 from fastapi import APIRouter, Query, HTTPException
-from app.services.aggregator import aggregate
+from app.services.aggregator import aggregate as do_aggregate
+from app.services.cache_service import make_cache_key, get_cached, set_cached
 
 router = APIRouter()
 
 @router.get("/aggregate")
-def aggregate_endpoint(symbols: str = Query(..., description="CSV of symbols, e.g. bitcoin,AAPL")):
+def aggregate_endpoint(
+    symbols: str = Query(..., description="CSV of symbols, e.g. bitcoin,AAPL"),
+    window: int = Query(60, ge=5, le=3600, description="Cache TTL seconds"),
+):
     try:
-        return aggregate(symbols)
+        key = make_cache_key(symbols, window)
+        hit = get_cached(key)
+        if hit:
+            data = hit["data"]
+            # mark as cache hit for transparency
+            if "meta" in data:
+                data["meta"]["cache"] = "hit"
+            else:
+                data["meta"] = {"cache": "hit"}
+            return data
+
+        # no cache -> fetch fresh
+        data = do_aggregate(symbols)
+        if "meta" in data:
+            data["meta"]["cache"] = "miss"
+        else:
+            data["meta"] = {"cache": "miss"}
+
+        set_cached(key, data, window)
+        return data
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
