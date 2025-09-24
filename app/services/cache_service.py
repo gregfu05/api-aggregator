@@ -17,14 +17,18 @@ def make_cache_key(symbols_csv: str, ttl_seconds: int) -> str:
     key_hash = hashlib.sha256(raw.encode()).hexdigest()[:24]
     return f"{raw}|h={key_hash}"
 
-def get_cached(key: str) -> Optional[Dict[str, Any]]:
+def get_cached(key: str):
     db = get_db()
     doc = db.cache.find_one({"key": key})
     if not doc:
         return None
-    # if document exists but expired (just in case TTL hasn’t cleaned it yet)
-    if doc.get("expiresAt") and doc["expiresAt"] <= _now_utc():
-        return None
+    exp = doc.get("expiresAt")
+    if isinstance(exp, datetime):
+        # normalize: if Mongo returned naive datetime, attach UTC
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        if exp <= _now_utc():
+            return None
     return doc
 
 def set_cached(key: str, data: Dict[str, Any], ttl_seconds: int) -> None:
