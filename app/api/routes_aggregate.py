@@ -14,14 +14,12 @@ def aggregate_endpoint(
         hit = get_cached(key)
         if hit:
             data = hit["data"]
-            # mark as cache hit for transparency
             if "meta" in data:
                 data["meta"]["cache"] = "hit"
             else:
                 data["meta"] = {"cache": "hit"}
             return data
 
-        # no cache -> fetch fresh
         data = do_aggregate(symbols)
         if "meta" in data:
             data["meta"]["cache"] = "miss"

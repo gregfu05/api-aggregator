@@ -51,7 +51,7 @@ def aggregate(symbols_csv: str) -> Dict[str, Any]:
         except Exception as e:
             warnings.append(f"coingecko error: {e}")
 
-    # ---- Stocks (Alpha Vantage) one-by-one (free API is rate-limited) ----
+    # ---- Stocks from Alpha Vantage one-by-one (free API is rate-limited) ----
     for sym in stocks:
         try:
             gq = fetch_global_quote(sym)
