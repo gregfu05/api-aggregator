@@ -19,8 +19,8 @@ def crypto_page(request: Request, symbol: str = Query("")):
             "symbol": symbol,
             "result": result,
             "error": error,
-            "title": "API Aggregator – Crypto",
-            "active": "crypto",  # <-- add this
+            "title": "CryptoStock – Crypto",
+            "active": "crypto", 
         },
     )
 
@@ -37,7 +37,7 @@ def stocks_page(request: Request, symbol: str = Query("")):
             "symbol": symbol,
             "result": result,
             "error": error,
-            "title": "API Aggregator – Stocks",
-            "active": "stocks",  # <-- add this
+            "title": "CryptoStock – Stocks",
+            "active": "stocks",  
         },
     )

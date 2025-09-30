@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>{{ title or "API Aggregator" }}</title>
+  <title>{{ title if title else "CryptoStock" }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:24px;max-width:840px}
@@ -30,7 +30,7 @@
 </style>
 </head>
 <body>
-  <h1>API Aggregator</h1>
+  <h1>CryptoStock</h1>
   <nav>
     <a href="/crypto" class="pill {% if active=='crypto' %}active{% endif %}">Crypto</a>
     <a href="/stocks" class="pill {% if active=='stocks' %}active{% endif %}">Stocks</a>
