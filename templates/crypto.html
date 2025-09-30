@@ -1,0 +1,52 @@
+{% extends "_base.html" %}
+{% block content %}
+<p>Search a crypto by name or symbol (e.g. <code>bitcoin</code>, <code>ethereum</code>). Suggestions use CoinGecko’s coin list.</p>
+
+<form action="/crypto" method="get" class="rel" autocomplete="off">
+  <div class="rel" style="flex:1">
+    <input id="crypto-input" type="text" name="symbol" value="{{ symbol }}" placeholder="bitcoin">
+    <ul id="crypto-suggest" class="suggest" style="display:none"></ul>
+  </div>
+  <button type="submit">Search</button>
+</form>
+
+{% if error %}<div class="err">⚠️ {{ error }}</div>{% endif %}
+{% if result %}
+<div class="card">
+  <h3>Result</h3>
+  <div><strong>Timestamp:</strong> {{ result.timestamp }}</div>
+  <div><strong>Cache:</strong> {{ result.meta.cache }}</div>
+  <table>
+    <thead><tr><th>Symbol</th><th>Type</th><th>Price</th><th>Source</th><th>As Of</th></tr></thead>
+    <tbody>
+      {% for a in result.assets %}
+      <tr><td>{{ a.symbol }}</td><td>{{ a.type }}</td><td>{{ "%.6f"|format(a.price) }}</td><td>{{ a.source }}</td><td>{{ a.asOf }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<script>
+const inp = document.getElementById('crypto-input');
+const box = document.getElementById('crypto-suggest');
+let t;
+inp.addEventListener('input', async () => {
+  clearTimeout(t);
+  const q = inp.value.trim();
+  if(!q){ box.style.display='none'; box.innerHTML=''; return; }
+  t = setTimeout(async () => {
+    const res = await fetch(`/suggest/crypto?q=${encodeURIComponent(q)}`);
+    const items = await res.json();
+    if(!Array.isArray(items) || items.length===0){ box.style.display='none'; box.innerHTML=''; return; }
+    box.innerHTML = items.map(i => `<li data-id="${i.id}">${i.name} (${i.symbol})</li>`).join('');
+    box.style.display='block';
+    [...box.querySelectorAll('li')].forEach(li => {
+      li.onclick = () => { inp.value = li.dataset.id; box.style.display='none'; };
+    });
+  }, 200);
+});
+document.addEventListener('click', (e)=>{ if(!box.contains(e.target) && e.target!==inp){ box.style.display='none'; }});
+</script>
+{% endblock %}
+

@@ -1,0 +1,51 @@
+{% extends "_base.html" %}
+{% block content %}
+<p>Search a stock by ticker or name (e.g. <code>AAPL</code>, <code>MSFT</code>). Suggestions use Alpha Vantage SYMBOL_SEARCH.</p>
+
+<form action="/stocks" method="get" class="rel" autocomplete="off">
+  <div class="rel" style="flex:1">
+    <input id="stocks-input" type="text" name="symbol" value="{{ symbol }}" placeholder="AAPL">
+    <ul id="stocks-suggest" class="suggest" style="display:none"></ul>
+  </div>
+  <button type="submit">Search</button>
+</form>
+
+{% if error %}<div class="err">⚠️ {{ error }}</div>{% endif %}
+{% if result %}
+<div class="card">
+  <h3>Result</h3>
+  <div><strong>Timestamp:</strong> {{ result.timestamp }}</div>
+  <div><strong>Cache:</strong> {{ result.meta.cache }}</div>
+  <table>
+    <thead><tr><th>Symbol</th><th>Type</th><th>Price</th><th>Source</th><th>As Of</th></tr></thead>
+    <tbody>
+      {% for a in result.assets %}
+      <tr><td>{{ a.symbol }}</td><td>{{ a.type }}</td><td>{{ "%.6f"|format(a.price) }}</td><td>{{ a.source }}</td><td>{{ a.asOf }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<script>
+const inpS = document.getElementById('stocks-input');
+const boxS = document.getElementById('stocks-suggest');
+let t2;
+inpS.addEventListener('input', async () => {
+  clearTimeout(t2);
+  const q = inpS.value.trim();
+  if(!q){ boxS.style.display='none'; boxS.innerHTML=''; return; }
+  t2 = setTimeout(async () => {
+    const res = await fetch(`/suggest/stocks?q=${encodeURIComponent(q)}`);
+    const items = await res.json();
+    if(!Array.isArray(items) || items.length===0){ boxS.style.display='none'; boxS.innerHTML=''; return; }
+    boxS.innerHTML = items.map(i => `<li data-sym="${i.symbol}">${i.symbol} — ${i.name}</li>`).join('');
+    boxS.style.display='block';
+    [...boxS.querySelectorAll('li')].forEach(li => {
+      li.onclick = () => { inpS.value = li.dataset.sym; boxS.style.display='none'; };
+    });
+  }, 200);
+});
+document.addEventListener('click', (e)=>{ if(!boxS.contains(e.target) && e.target!==inpS){ boxS.style.display='none'; }});
+</script>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "_base.html" %}
+{% block content %}
+<p>Type symbols (mix crypto + stocks): e.g. <code>bitcoin,AAPL</code>, <code>ethereum,MSFT</code></p>
+
+<form action="/ui/search" method="get">
+  <input type="text" name="symbols" value="{{ symbols }}" placeholder="bitcoin,AAPL" style="flex:1;padding:10px;border:1px solid #ccc;border-radius:8px">
+  <button type="submit" style="padding:10px 14px;border:0;background:#111;color:#fff;border-radius:8px;cursor:pointer">Search</button>
+</form>
+
+{% if error %}
+  <div class="err">⚠️ {{ error }}</div>
+{% endif %}
+
+{% if result %}
+  <div class="card">
+    <h3>Results</h3>
+    <div><strong>Timestamp:</strong> {{ result.timestamp }}</div>
+    <div><strong>Cache:</strong> {{ result.meta.cache }}</div>
+    <table>
+      <thead>
+        <tr><th>Symbol</th><th>Type</th><th>Price</th><th>Source</th><th>As Of</th></tr>
+      </thead>
+      <tbody>
+      {% for a in result.assets %}
+        <tr>
+          <td>{{ a.symbol }}</td>
+          <td>{{ a.type }}</td>
+          <td>{{ "%.6f"|format(a.price) }}</td>
+          <td>{{ a.source }}</td>
+          <td>{{ a.asOf }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+{% endblock %}

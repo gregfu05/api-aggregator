@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{{ title or "API Aggregator" }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:24px;max-width:840px}
+    h1{margin:0 0 8px}
+    nav a{margin-right:12px}
+    form{display:flex;gap:8px;margin:16px 0}
+    input[type=text]{flex:1;padding:10px;border:1px solid #ccc;border-radius:8px}
+    button{padding:10px 14px;border:0;background:#111;color:#fff;border-radius:8px;cursor:pointer}
+    .card{border:1px solid #eee;border-radius:12px;padding:16px;margin:12px 0;background:#fafafa}
+    .err{color:#b00020;margin:8px 0}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+    ul.suggest{list-style:none;margin:0;padding:6px;border:1px solid #ddd;border-radius:8px;position:absolute;background:#fff;max-height:220px;overflow:auto;width:calc(100% - 170px);z-index:10}
+    ul.suggest li{padding:6px 8px;cursor:pointer}
+    ul.suggest li:hover{background:#f0f0f0}
+    .rel{position:relative}
+    nav { margin: 8px 0 20px }
+    .pill {
+    display:inline-block; padding:8px 14px; border:1px solid #111;
+    border-radius:999px; background:#fff; color:#111; text-decoration:none;
+    margin-right:8px; transition:background .12s ease;
+    }
+    .pill:hover { background:#f3f3f3 }
+    .pill.active { background:#eee; cursor:default }
+</style>
+</head>
+<body>
+  <h1>API Aggregator</h1>
+  <nav>
+    <a href="/crypto" class="pill {% if active=='crypto' %}active{% endif %}">Crypto</a>
+    <a href="/stocks" class="pill {% if active=='stocks' %}active{% endif %}">Stocks</a>
+    <a href="/" class="pill {% if active=='mixed' %}active{% endif %}">Mixed</a>
+  </nav>
+  {% block content %}{% endblock %}
+</body>
+</html>
