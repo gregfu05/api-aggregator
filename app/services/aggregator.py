@@ -1,83 +1,101 @@
+
+from __future__ import annotations
 from datetime import datetime, timezone
-from typing import List, Dict, Any, Tuple
+from typing import Dict, List
 
 from app.adapters.coingecko import fetch_simple_price
-from app.adapters.alphavantage import fetch_global_quote, AlphaVantageError
+from app.adapters.alphavantage import fetch_quote
+from app.services.cache_service import get_cache, set_cache
 
-def classify_symbols(symbols: List[str]) -> Tuple[List[str], List[str]]:
+
+def _classify(symbol: str) -> str:
     """
-    Naive split:
-    - STOCK if it looks like AAPL, MSFT (all caps, letters/dots, len <= 6)
-    - otherwise CRYPTO (e.g., bitcoin, ethereum)
+    Very simple heuristic:
+    - if it's ALL UPPERCASE -> treat as stock ticker
+    - else -> treat as crypto (CoinGecko id)
     """
-    stocks, cryptos = [], []
-    for s in symbols:
-        s_clean = s.strip()
-        if s_clean.isupper() and 1 <= len(s_clean) <= 6 and s_clean.replace(".", "").isalpha():
-            stocks.append(s_clean)
-        else:
-            cryptos.append(s_clean.lower())
-    return stocks, cryptos
+    return "stock" if symbol and symbol.upper() == symbol else "crypto"
 
-def aggregate(symbols_csv: str) -> Dict[str, Any]:
-    now = datetime.now(timezone.utc).isoformat()
-    symbols = [s for s in symbols_csv.split(",") if s.strip()]
-    if not symbols:
-        return {"timestamp": now, "assets": [], "meta": {"warnings": ["no symbols provided"]}}
 
-    stocks, cryptos = classify_symbols(symbols)
+def _normalize_symbols(csv: str) -> List[str]:
+    return [s.strip() for s in csv.split(",") if s.strip()]
 
-    assets: List[Dict[str, Any]] = []
-    warnings: List[str] = []
-    sources_meta: List[Dict[str, Any]] = []
 
-    # ---- Crypto batch via CoinGecko ----
-    if cryptos:
-        try:
-            cg = fetch_simple_price(cryptos, ["usd"])
-            for cid in cryptos:
-                price = cg.get(cid, {}).get("usd")
-                if price is None:
-                    warnings.append(f"no crypto price for '{cid}'")
-                    continue
-                assets.append({
-                    "symbol": cid,
-                    "type": "crypto",
-                    "price": float(price),
-                    "source": "coingecko",
-                    "asOf": now
-                })
-            sources_meta.append({"name": "coingecko", "count": len(cryptos)})
-        except Exception as e:
-            warnings.append(f"coingecko error: {e}")
+def aggregate_with_cache(symbols_csv: str, window: int = 60) -> Dict:
+    """
+    Unified aggregator used by BOTH the API and the UI.
+    - Checks Mongo cache first (TTL).
+    - On miss, fetches live data, writes cache, returns payload.
+    - Adds meta.cache = "hit" | "miss".
+    """
+    now = datetime.now(timezone.utc)
+    symbols = _normalize_symbols(symbols_csv)
+    cache_key = f"agg::{','.join(symbols)}"
 
-    # ---- Stocks from Alpha Vantage one-by-one ----
-    for sym in stocks:
-        try:
-            gq = fetch_global_quote(sym)
-            price_str = gq.get("05. price")
-            day = gq.get("07. latest trading day")
-            if price_str is None:
-                warnings.append(f"no stock price for '{sym}'")
+    # 1) Try cache
+    cached_doc = get_cache(cache_key)
+    if cached_doc:
+        payload = cached_doc.get("payload") or cached_doc  # tolerate either shape
+        # Ensure meta.cache is visible to the UI
+        payload.setdefault("meta", {})
+        payload["meta"]["cache"] = "hit"
+        return payload
+
+    # 2) Miss -> fetch live
+    assets: List[Dict] = []
+
+    # crypto chunk (CoinGecko expects ids lowercased by design)
+    crypto_ids = [s for s in symbols if _classify(s) == "crypto"]
+    if crypto_ids:
+        price_map = fetch_simple_price(crypto_ids, ["usd"])  # { "bitcoin": {"usd": 12345.0}, ... }
+        for cid in crypto_ids:
+            usd = price_map.get(cid, {}).get("usd")
+            if usd is None:
                 continue
             assets.append({
-                "symbol": sym,
-                "type": "stock",
-                "price": float(price_str),
-                "source": "alphavantage",
-                "asOf": f"{day}T00:00:00Z" if day else now
+                "symbol": cid,
+                "type": "crypto",
+                "price": float(usd),
+                "source": "coingecko",
+                "asOf": now.isoformat(),
             })
-        except AlphaVantageError as e:
-            warnings.append(f"{sym}: {e}")
-        except Exception as e:
-            warnings.append(f"{sym}: upstream error: {e}")
 
-    return {
-        "timestamp": now,
+    # stock chunk (Alpha Vantage)
+    stock_syms = [s for s in symbols if _classify(s) == "stock"]
+    for sym in stock_syms:
+        q = fetch_quote(sym)  # returns the "Global Quote" dict fields
+        price = (
+            q.get("05. price")
+            or q.get("05. Price")
+            or q.get("price")
+            or q.get("05_price")
+            or 0
+        )
+        try:
+            price = float(price)
+        except Exception:
+            price = 0.0
+        as_of = q.get("07. latest trading day") or q.get("07_latest_trading_day")
+        assets.append({
+            "symbol": sym,
+            "type": "stock",
+            "price": price,
+            "source": "alphavantage",
+            "asOf": as_of or now.date().isoformat(),
+        })
+
+    payload = {
+        "timestamp": now.isoformat(),
         "assets": assets,
         "meta": {
-            "cache": "n/a",
-            "sources": sources_meta,
-            "warnings": warnings
-        }
+            "cache": "miss",
+            "sources": [{"name": "coingecko"}, {"name": "alphavantage"}],
+            "warnings": [],
+        },
     }
+
+    # 3) Write to cache with TTL window (seconds)
+    ttl_seconds = max(15, int(window))  # small safety floor
+    set_cache(cache_key, payload, ttl_seconds)
+
+    return payload

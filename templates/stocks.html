@@ -11,27 +11,36 @@
 </form>
 
 {% if error %}<div class="err">⚠️ {{ error }}</div>{% endif %}
+
 {% if result %}
-<div class="card">
-  <h3>Result</h3>
-  <div><strong>Timestamp:</strong> {{ result.timestamp }}</div>
-  <div><strong>Cache:</strong> {{ result.meta.cache }}</div>
-  <table>
-    <thead><tr><th>Symbol</th><th>Type</th><th>Price</th><th>Source</th><th>As Of</th></tr></thead>
-    <tbody>
-      {% for a in result.assets %}
-      <tr><td>{{ a.symbol }}</td><td>{{ a.type }}</td><td>{{ "%.6f"|format(a.price) }}</td><td>{{ a.source }}</td><td>{{ a.asOf }}</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="card" style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; align-items:start;">
+  <div>
+    <h3>Result</h3>
+    <div><strong>Timestamp:</strong> {{ result.timestamp }}</div>
+    <div><strong>Cache:</strong> {{ result.meta.cache }}</div>
+    <table>
+      <thead><tr><th>Symbol</th><th>Type</th><th>Price</th><th>Source</th><th>As Of</th></tr></thead>
+      <tbody>
+        {% for a in result.assets %}
+        <tr><td>{{ a.symbol }}</td><td>{{ a.type }}</td><td>{{ "%.6f"|format(a.price) }}</td><td>{{ a.source }}</td><td>{{ a.asOf }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div id="chartBox" style="display:none">
+    <h3>Last 30 days</h3>
+    <canvas id="stockChart" height="120"></canvas>
+  </div>
 </div>
 {% endif %}
 
 <script>
+/* --- suggestions --- */
 const inpS = document.getElementById('stocks-input');
 const boxS = document.getElementById('stocks-suggest');
 let t2;
-inpS.addEventListener('input', async () => {
+inpS?.addEventListener('input', async () => {
   clearTimeout(t2);
   const q = inpS.value.trim();
   if(!q){ boxS.style.display='none'; boxS.innerHTML=''; return; }
@@ -47,5 +56,49 @@ inpS.addEventListener('input', async () => {
   }, 200);
 });
 document.addEventListener('click', (e)=>{ if(!boxS.contains(e.target) && e.target!==inpS){ boxS.style.display='none'; }});
+
+/* --- chart --- */
+async function drawStockChart(symbol){
+  try{
+    const res = await fetch(`/history/stock?symbol=${encodeURIComponent(symbol)}`);
+    const data = await res.json();
+    if(!data.series || !data.series.length) return;
+    const labels = data.series.map(p => new Date(p.t));
+    const values = data.series.map(p => p.y);
+    const ctx = document.getElementById('stockChart').getContext('2d');
+    window._stockChart && window._stockChart.destroy();
+    window._stockChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: symbol,
+          data: values,
+          borderWidth: 2,
+          borderColor: 'blue',
+          backgroundColor: 'rgba(0,0,255,0.08)',
+          pointRadius: 0,
+          tension: 0.2,
+        }]
+      },
+      options: {
+        scales: {
+          x: { type: 'time', time: { unit: 'day' } },
+          y: { beginAtZero: false }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+    document.getElementById('chartBox').style.display = 'block';
+  }catch(e){}
+}
 </script>
+
+{% if result and result.assets and result.assets[0].type == 'stock' %}
+<script>
+  drawStockChart('{{ result.assets[0].symbol | e }}');
+  document.getElementById('chartBox').style.display = 'block';
+</script>
+{% endif %}
+
 {% endblock %}

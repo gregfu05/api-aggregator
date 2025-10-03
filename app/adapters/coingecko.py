@@ -48,3 +48,12 @@ def suggest_crypto(prefix: str, limit: int = 10):
             if len(matches) >= limit:
                 break
     return matches
+
+# ---- history (last 30 days) ----
+def fetch_market_chart(coin_id: str, days: int = 30, vs: str = "usd"):
+    url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
+    r = requests.get(url, params={"vs_currency": vs, "days": days}, timeout=15)
+    r.raise_for_status()
+    data = r.json()
+    
+    return [{"t": int(p[0]), "y": float(p[1])} for p in data.get("prices", [])]

@@ -1,10 +1,13 @@
+
 from fastapi import APIRouter, Request, Query
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from app.services.aggregator import aggregate as do_aggregate
+
+from app.services.aggregator import aggregate_with_cache
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+templates.env.auto_reload = True  # helps during dev
 
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request):
@@ -15,7 +18,7 @@ def home(request: Request):
             "symbols": "",
             "result": None,
             "error": None,
-            "title": "CryptoStock - Mixed",
+            "title": "CryptoStock – Mixed",
             "active": "mixed",
         },
     )
@@ -24,42 +27,20 @@ def home(request: Request):
 def ui_search(
     request: Request,
     symbols: str = Query("", description="CSV e.g. bitcoin,AAPL"),
-    window: int = Query(60),
+    window: int = Query(60, description="Cache TTL seconds"),
 ):
+    ctx = {
+        "request": request,
+        "symbols": symbols,
+        "title": "CryptoStock – Mixed",
+        "active": "mixed",
+    }
     if not symbols.strip():
         return templates.TemplateResponse(
-            "index.html",
-            {
-                "request": request,
-                "symbols": symbols,
-                "result": None,
-                "error": "Please enter at least one symbol.",
-                "title": "CryptoStock - Mixed",   
-                "active": "mixed",                
-            },
+            "index.html", {**ctx, "result": None, "error": "Please enter at least one symbol."}
         )
     try:
-        data = do_aggregate(symbols)
-        return templates.TemplateResponse(
-            "index.html",
-            {
-                "request": request,
-                "symbols": symbols,
-                "result": data,
-                "error": None,
-                "title": "CryptoStock - Mixed",   
-                "active": "mixed",               
-            },
-        )
+        data = aggregate_with_cache(symbols, window=window)
+        return templates.TemplateResponse("index.html", {**ctx, "result": data, "error": None})
     except Exception as e:
-        return templates.TemplateResponse(
-            "index.html",
-            {
-                "request": request,
-                "symbols": symbols,
-                "result": None,
-                "error": str(e),
-                "title": "CryptoStock - Mixed",   
-                "active": "mixed",                
-            },
-        )
+        return templates.TemplateResponse("index.html", {**ctx, "result": None, "error": str(e)})

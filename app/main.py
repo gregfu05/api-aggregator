@@ -12,6 +12,7 @@ from app.web.routes_ui import router as ui_router
 from app.api.routes_assets import router as assets_router
 from app.api.routes_suggest import router as suggest_router
 from app.web.routes_sections import router as sections_router
+from app.api.routes_history import router as history_router
 
 app = FastAPI(title="API Aggregator")
 app.include_router(crypto_router)
@@ -24,6 +25,7 @@ app.include_router(ui_router)
 app.include_router(assets_router)
 app.include_router(suggest_router)
 app.include_router(sections_router)
+app.include_router(history_router)
 
 @app.get("/health")
 def health():

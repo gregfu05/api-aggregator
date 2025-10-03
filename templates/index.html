@@ -2,7 +2,7 @@
 {% block content %}
 <p>Type symbols (mix crypto + stocks): e.g. <code>bitcoin,AAPL</code>, <code>ethereum,MSFT</code></p>
 
-<form action="/ui/search" method="get">
+<form action="/ui/search" method="get" style="display:flex;gap:8px" autocomplete="off">
   <input type="text" name="symbols" value="{{ symbols }}" placeholder="bitcoin,AAPL" style="flex:1;padding:10px;border:1px solid #ccc;border-radius:8px">
   <button type="submit" style="padding:10px 14px;border:0;background:#111;color:#fff;border-radius:8px;cursor:pointer">Search</button>
 </form>
@@ -12,7 +12,8 @@
 {% endif %}
 
 {% if result %}
-  <div class="card">
+<div class="card" style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; align-items:start;">
+  <div>
     <h3>Results</h3>
     <div><strong>Timestamp:</strong> {{ result.timestamp }}</div>
     <div><strong>Cache:</strong> {{ result.meta.cache }}</div>
@@ -33,5 +34,76 @@
       </tbody>
     </table>
   </div>
+
+  <div id="chartBox" style="display:none">
+    <h3>Last 30 days (overlay)</h3>
+    <canvas id="mixChart" height="120"></canvas>
+    <div id="mixLegend" style="margin-top:8px;font-size:14px;"></div>
+  </div>
+</div>
 {% endif %}
+
+<script>
+/* --- mixed overlay chart --- */
+async function drawMixedChart(symbolsCsv){
+  try{
+    const parts = symbolsCsv.split(',').map(s=>s.trim()).filter(Boolean).slice(0,2);
+    if(parts.length===0) return;
+
+    const datasets = [];
+    let labels = null;
+
+    for(let i=0;i<parts.length;i++){
+      const sym = parts[i];
+      let res;
+      // heuristic: uppercase = stock, else crypto
+      if(sym.toUpperCase()===sym){
+        res = await fetch(`/history/stock?symbol=${encodeURIComponent(sym)}`);
+      } else {
+        res = await fetch(`/history/crypto?id=${encodeURIComponent(sym)}`);
+      }
+      const data = await res.json();
+      if(!data.series || !data.series.length) continue;
+      const series = data.series;
+      if(!labels) labels = series.map(p => new Date(p.t));
+      const values = series.map(p => p.y);
+      datasets.push({
+        label: sym,
+        data: values,
+        borderWidth: 2,
+        borderColor: i===0 ? 'blue' : 'red',
+        backgroundColor: i===0 ? 'rgba(0,0,255,0.06)' : 'rgba(255,0,0,0.06)',
+        pointRadius: 0,
+        tension: 0.2,
+      });
+    }
+
+    if(datasets.length===0) return;
+
+    const ctx = document.getElementById('mixChart').getContext('2d');
+    window._mixChart && window._mixChart.destroy();
+    window._mixChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        scales: {
+          x: { type: 'time', time: { unit: 'day' } },
+          y: { beginAtZero: false }
+        },
+        plugins: { legend: { display: true } }
+      }
+    });
+    document.getElementById('chartBox').style.display = 'block';
+  }catch(e){}
+}
+</script>
+
+{% if result and symbols %}
+<script>
+  drawMixedChart('{{ symbols | e }}');
+  document.getElementById('chartBox').style.display = 'block';
+</script>
+{% endif %}
+
 {% endblock %}
+
