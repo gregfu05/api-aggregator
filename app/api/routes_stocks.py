@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Query, HTTPException
-from app.adapters.alphavantage import fetch_global_quote, AlphaVantageError
+from app.adapters.alphavantage import fetch_quote as fetch_global_quote, AlphaVantageError
+
 
 router = APIRouter()
 
