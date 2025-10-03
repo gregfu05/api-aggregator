@@ -11,7 +11,7 @@ _db = None
 def get_client() -> MongoClient:
     global _client
     if _client is None:
-        # Make datetimes timezone-aware (UTC) when read from Mongo
+        # Make datetimes timezone-aware when read from Mongo
         _client = MongoClient(MONGODB_URI, tz_aware=True, tzinfo=timezone.utc)
     return _client
 

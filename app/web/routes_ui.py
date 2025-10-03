@@ -15,7 +15,7 @@ def home(request: Request):
             "symbols": "",
             "result": None,
             "error": None,
-            "title": "CryptoStock – Mixed",
+            "title": "CryptoStock - Mixed",
             "active": "mixed",
         },
     )
@@ -34,7 +34,7 @@ def ui_search(
                 "symbols": symbols,
                 "result": None,
                 "error": "Please enter at least one symbol.",
-                "title": "CryptoStock – Mixed",   
+                "title": "CryptoStock - Mixed",   
                 "active": "mixed",                
             },
         )
@@ -47,7 +47,7 @@ def ui_search(
                 "symbols": symbols,
                 "result": data,
                 "error": None,
-                "title": "CryptoStock – Mixed",   
+                "title": "CryptoStock - Mixed",   
                 "active": "mixed",               
             },
         )
@@ -59,7 +59,7 @@ def ui_search(
                 "symbols": symbols,
                 "result": None,
                 "error": str(e),
-                "title": "CryptoStock – Mixed",   
+                "title": "CryptoStock - Mixed",   
                 "active": "mixed",                
             },
         )

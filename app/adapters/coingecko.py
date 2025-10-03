@@ -41,7 +41,7 @@ def suggest_crypto(prefix: str, limit: int = 10):
     for it in items:
         if it["name"].lower().startswith(prefix) or it["symbol"].lower().startswith(prefix):
             matches.append({
-                "id": it["id"],           # coingecko id (used in /crypto/price and /aggregate)
+                "id": it["id"],           
                 "symbol": it["symbol"].upper(),
                 "name": it["name"]
             })

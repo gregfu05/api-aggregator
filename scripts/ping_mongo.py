@@ -2,8 +2,7 @@ import asyncio, os
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 
-load_dotenv()  # load values from .env
-
+load_dotenv()  
 uri = os.getenv("MONGODB_URI")
 dbn = os.getenv("MONGODB_DB")
 

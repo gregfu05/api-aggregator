@@ -19,7 +19,7 @@ def crypto_page(request: Request, symbol: str = Query("")):
             "symbol": symbol,
             "result": result,
             "error": error,
-            "title": "CryptoStock – Crypto",
+            "title": "CryptoStock - Crypto",
             "active": "crypto", 
         },
     )
@@ -37,7 +37,7 @@ def stocks_page(request: Request, symbol: str = Query("")):
             "symbol": symbol,
             "result": result,
             "error": error,
-            "title": "CryptoStock – Stocks",
+            "title": "CryptoStock - Stocks",
             "active": "stocks",  
         },
     )
