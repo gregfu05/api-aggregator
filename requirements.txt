@@ -6,3 +6,5 @@ requests
 python-dotenv
 pymongo
 jinja2
+pytest
+httpx
