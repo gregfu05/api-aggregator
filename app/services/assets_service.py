@@ -4,7 +4,7 @@ from app.db.mongo import get_db
 
 def list_assets() -> List[Dict[str, Any]]:
     db = get_db()
-    return list(db.assets.find({}).sort("addedAt", -1))
+    return list(db.assets.find({}, {"_id": 0}).sort("addedAt", -1))
 
 def add_asset(symbol: str, type_: str, name: Optional[str] = None) -> Dict[str, Any]:
     db = get_db()

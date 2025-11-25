@@ -6,6 +6,7 @@ from app.db.mongo import get_db
 
 async def request_logger_mw(request: Request, call_next: Callable):
     start = time.perf_counter()
+    status = 500  # default status if response fails
     try:
         response: Response = await call_next(request)
         status = response.status_code
