@@ -26,38 +26,22 @@ def test_set_cache_stores_properly():
     assert time_diff < 2  # Allow 2 seconds tolerance
 
 
-def test_get_cache_returns_expired_document_before_ttl_cleanup(monkeypatch):
-    """Expired documents still appear until MongoDB TTL cleanup deletes them."""
-    # Mock the database to return an expired cache entry
-    def mock_get_db():
-        class MockCollection:
-            def find_one(self, query):
-                if query.get("key") == "expired_key":
-                    # Return an entry that expired 10 seconds ago
-                    expired_time = datetime.now(timezone.utc) - timedelta(seconds=10)
-                    return {
-                        "_id": "mock_id",
-                        "key": "expired_key", 
-                        "payload": {"data": "old"},
-                        "expiresAt": expired_time
-                    }
-                return None
-        
-        class MockDB:
-            def __init__(self):
-                self.cache = MockCollection()
-        
-        return MockDB()
+def test_get_cache_returns_expired_document_before_ttl_cleanup():
+    """Test that cache entries persist even after expiration (like MongoDB before TTL cleanup)."""
+    test_key = "will_expire_key"
+    test_payload = {"data": "temp"}
     
-    # Apply the monkeypatch
-    import app.services.cache_service
-    monkeypatch.setattr(app.services.cache_service, "get_db", mock_get_db)
+    # Set a cache entry with very short TTL
+    set_cache(test_key, test_payload, ttl_seconds=1)
     
-    # Test that expired cache returns the document (MongoDB TTL handles actual deletion)
-    result = get_cache("expired_key")
-    assert result is not None  # The function returns the doc, MongoDB handles TTL cleanup
-    assert result["key"] == "expired_key"
-    assert "expiresAt" in result
+    # Wait for it to expire
+    time.sleep(1.1)
+    
+    # Our fake cache still returns it (like MongoDB before TTL cleanup job runs)
+    result = get_cache(test_key)
+    assert result is not None  # Entry still exists
+    assert result["key"] == test_key
+    assert result["payload"] == test_payload
 
 
 def test_get_cache_returns_none_for_nonexistent_key():
