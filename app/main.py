@@ -13,6 +13,8 @@ from app.api.routes_assets import router as assets_router
 from app.api.routes_suggest import router as suggest_router
 from app.web.routes_sections import router as sections_router
 from app.api.routes_history import router as history_router
+from prometheus_fastapi_instrumentator import Instrumentator
+
 
 app = FastAPI(title="API Aggregator")
 app.include_router(crypto_router)
@@ -26,6 +28,8 @@ app.include_router(assets_router)
 app.include_router(suggest_router)
 app.include_router(sections_router)
 app.include_router(history_router)
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+
 
 @app.get("/health")
 def health():
